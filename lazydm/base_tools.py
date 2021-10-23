@@ -1,6 +1,5 @@
 import os
 import random
-from data import npcnames
 
 class DMTools:
     """Base class for all tools
@@ -10,38 +9,62 @@ class DMTools:
         names = Initalizing a list of lists which will contain all NPC names
     
     """
-    def __init__(self, campaign="default"):
-        self.campaign = campaign
+    def __init__(self, campaign='default', genre='fantasy'):
         random.seed()
-        self.names = []
+        self.campaign = campaign
+        self.genre = genre
+        # Initalize our resources by loading in all files
+        self.resources = self.load_resources()
 
 
-    def generate_name(self, name_type="fantasy", fullname=False):
-        self.names = self.get_names_from_text()
-        print(self.names)
-        if name_type == "fantasy":
-            names = npcnames.fgiven
+    def get_new_name(self, fullname=True):
+        """
+        Get a single randomly generated name, either just first name or both first and last
+        """
+        checkout = []
+        for r in self.resources:
+            if r['filename'].startswith(self.genre) and r['filename'].endswith('names.txt'):
+                checkout.append(r['content'])
+
+        if fullname:
+            first = self.get_random_item(checkout[0])
+            last = self.get_random_item(checkout[1])
+            name = f'{first} {last}'
         else:
-            names = npcnames.fgiven
-        rand = random.randint(0, len(names) - 1)
-        return names[rand]
+            name = self.get_random_item(checkout[0])
+
+        return name
 
 
-    def get_names_from_text(self, filename=None, get_all=True, path="data"):
+    def get_random_item(self, item_list):
+        r = random.randint(0, len(item_list) - 1)
+        return item_list[r]
+
+
+    def load_resources(self, get_all=True, file_name=None, path='data'):
         os.chdir(path)
+        files = []
 
         if get_all:
             for file in os.listdir():
-                if file.endswith(".txt"):
-                    file_path = f"{path}\{file}"
-
-                    self.read_text_file(file_path)
-
+                if file.endswith('.txt'):
+                    files.append({'filename': file, 'content': self.read_text_file(file)})
         else:
-            file_path = f"{path}\{filename}"
-            self.read_text_file(file_path)
+            files = self.read_text_file(file_name)
+
+        return files
 
 
     def read_text_file(self, file_path):
         with open(file_path, 'r') as f:
-            return f.read()
+            s = f.read()
+            self.clean_text_list = self._clean_text(s)
+
+            return self.clean_text_list
+
+
+    def _clean_text(self, text):
+        """Take string of text and return clean list of text"""
+        text_list = text.split(',')
+
+        return [t.replace('\n', '').strip() for t in text_list]
